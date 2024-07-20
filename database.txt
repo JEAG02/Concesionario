@@ -1,0 +1,104 @@
+create table concesionario(
+	id serial,
+	nombre varchar(20),
+	direccion varchar(50),
+	telefono varchar(10),
+	email varchar(30),
+	primary key (id)
+);
+create table empleado(
+	dni serial,
+	nombre varchar(30),
+	salario int,
+	telefono varchar(10),
+	email varchar(30),
+	id_concesionario serial,
+	primary key (dni),
+	constraint fk_consecionario_empleado foreign key (id_concesionario) references concesionario (id)
+);
+
+create table venta(
+	id serial,
+	fecha date,
+	precio_total int,
+	dni_empleado serial,
+	dni_cliente serial,
+	primary key (id),
+	constraint fk_vendedor_venta foreign key (dni_empleado) references empleado (dni),
+	constraint fk_cliente_venta foreign key (dni_cliente) references cliente (dni)
+);
+
+CREATE OR REPLACE FUNCTION actualizar_precio_total_venta()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE Venta
+    SET precio_total = (
+        SELECT COALESCE(SUM(precio_total), 0)
+        FROM Detalle_venta
+        WHERE id_venta = NEW.id_venta
+    )
+    WHERE id = NEW.id_venta;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_actualizar_precio_total
+AFTER INSERT OR UPDATE ON Detalle_venta
+FOR EACH ROW
+EXECUTE FUNCTION actualizar_precio_total_venta();
+
+
+create table detalle_venta(
+	id serial,
+	tipo_producto VARCHAR(30) CHECK (tipo_producto IN ('vehiculo', 'insumo')), 
+	cantidad int,
+	precio_unitario int,
+	precio_total int,
+	id_venta serial,
+	id_producto serial,
+	nombre_producto varchar(20),
+	primary key (id),
+	constraint fk_id_venta foreign key (id_venta) references venta (id),
+	constraint fk_producto_vehiculo foreign key (id_producto) references vehiculo (id),
+	constraint fk_producto_insumo foreign key (id_producto) references insumo (id)
+);
+
+create table cliente(
+	dni serial,
+	nombre varchar(30),
+	direccion varchar(50),
+	telefono_cliente varchar(10),
+	email varchar(40),
+	id_concesionario serial,
+	primary key (dni),
+	constraint fk_consecionario_empleado foreign key (id_concesionario) references concesionario (id)
+);
+
+create table almacen(
+	id serial,
+	nombre varchar(30),
+	ubicacion varchar(50),
+	telefono varchar(10),
+	primary key (id)
+);
+
+create table insumo(
+	id serial,
+	nombre varchar(30),
+	descripcion text,
+	precio int,
+	id_almacen serial,
+	primary key(id),
+	constraint fk_almacen_insumo foreign key (id_almacen) references almacen (id)
+);
+create table vehiculo (
+    id serial,
+    marca varchar(30),
+    modelo varchar(30),
+    precio int,
+    id_concesionario serial,
+	primary key (id),
+    constraint fk_concesionario_vehiculo foreign key (id_concesionario) references concesionario (id)
+);
+
